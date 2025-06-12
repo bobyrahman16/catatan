@@ -1,76 +1,73 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aplikasi Catatan</title>
+  <meta charset="UTF-8">
+  <title>Catatan Ringkas</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-  <div class="w-full max-w-xl bg-white shadow-md rounded-lg p-6">
-    <h1 class="text-2xl font-bold mb-4 text-center text-blue-600">Catatan Harian</h1>
-
-    <!-- Form Catatan -->
-    <form id="noteForm" class="mb-6 space-y-4">
-      <textarea id="isi" placeholder="Tulis catatanmu di sini..." class="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-400" required></textarea>
-      <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">Simpan Catatan</button>
+<body class="bg-gray-100 min-h-screen p-6">
+  <div class="max-w-xl mx-auto bg-white shadow-xl rounded-xl p-6 space-y-4">
+    <h1 class="text-2xl font-bold text-center">Catatan</h1>
+    
+    <form id="note-form" class="flex flex-col gap-2">
+      <textarea id="note" placeholder="Tulis catatan..." required class="p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">Simpan Catatan</button>
     </form>
 
-    <!-- Daftar Catatan -->
-    <div>
-      <h2 class="text-lg font-semibold mb-2 text-gray-700">Daftar Catatan:</h2>
-      <ul id="noteList" class="space-y-3 max-h-96 overflow-y-auto"></ul>
+    <div id="notes-container" class="space-y-2">
+      <p class="text-gray-500 text-center">Memuat catatan...</p>
     </div>
   </div>
 
   <script>
-    const form = document.getElementById('noteForm');
-    const noteList = document.getElementById('noteList');
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbwaIz1Tg5beDL8iedlmny-3sTJihemDyO88AF976w12COb1rbqr7HNmJzz5ZYUjNj25wA/exec'; // <-- Ganti ini
+    const scriptURL = "YOUR_SCRIPT_URL"; // ganti dengan URL Web App dari Google Apps Script
 
-    // Simpan catatan
-    form.addEventListener('submit', async (e) => {
+    const form = document.getElementById("note-form");
+    const noteInput = document.getElementById("note");
+    const notesContainer = document.getElementById("notes-container");
+
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const isi = document.getElementById('isi').value;
+      const isi = noteInput.value.trim();
+      if (!isi) return;
 
-      try {
-        const res = await fetch(scriptURL, {
-          method: 'POST',
-          body: JSON.stringify({ isi }),
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
+      const res = await fetch(scriptURL, {
+        method: "POST",
+        body: JSON.stringify({ isi }),
+        headers: { "Content-Type": "application/json" }
+      });
 
-        const data = await res.json();
-        if (data.success) {
-          document.getElementById('isi').value = '';
-          fetchNotes();
-        }
-      } catch (err) {
-        alert('Gagal menyimpan catatan.');
+      if (res.ok) {
+        noteInput.value = "";
+        loadNotes();
+      } else {
+        alert("Gagal menyimpan catatan.");
       }
     });
 
-    // Ambil catatan
-    async function fetchNotes() {
+    async function loadNotes() {
       try {
         const res = await fetch(scriptURL);
         const notes = await res.json();
 
-        noteList.innerHTML = '';
+        if (notes.length === 0) {
+          notesContainer.innerHTML = `<p class="text-gray-500 text-center">Belum ada catatan.</p>`;
+          return;
+        }
+
+        notesContainer.innerHTML = "";
         notes.reverse().forEach(note => {
-          const li = document.createElement('li');
-          li.className = 'bg-gray-100 p-3 rounded shadow text-sm';
-          li.innerHTML = `<p>${note.isi}</p><p class="text-xs text-gray-500 mt-1">${new Date(note.tanggal).toLocaleString()}</p>`;
-          noteList.appendChild(li);
+          const el = document.createElement("div");
+          el.className = "bg-gray-100 p-3 rounded-lg border border-gray-300";
+          el.textContent = note.isi;
+          notesContainer.appendChild(el);
         });
       } catch (err) {
-        noteList.innerHTML = '<li class="text-red-500">Gagal memuat catatan.</li>';
+        notesContainer.innerHTML = `<p class="text-red-500 text-center">Gagal memuat catatan.</p>`;
       }
     }
 
-    fetchNotes();
+    loadNotes();
   </script>
 </body>
 </html>
