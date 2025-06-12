@@ -1,90 +1,70 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Catatan Harian</title>
+  <meta charset="UTF-8">
+  <title>Catatan</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-800">
-  <header class="bg-green-600 text-white py-4 text-center text-xl font-bold">
-    Catatan Harian
-  </header>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-xl mx-auto bg-white p-4 rounded shadow">
+    <h1 class="text-xl font-bold mb-4">Tambah Catatan</h1>
+    <form id="noteForm" class="space-y-4">
+      <textarea id="isi" class="w-full p-2 border rounded" placeholder="Tulis catatan..." required></textarea>
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Simpan</button>
+    </form>
 
-  <main class="max-w-md mx-auto mt-4 px-4">
-    <div class="space-y-3">
-      <textarea id="isi" rows="3" placeholder="Apa yang kamu pikirkan?" class="w-full p-2 border rounded"></textarea>
-      <button onclick="tambahCatatan()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">Simpan</button>
-      <input type="text" id="pencarian" placeholder="Cari catatan..." oninput="tampilkanCatatan()" class="w-full p-2 border rounded">
+    <div class="mt-8">
+      <h2 class="text-lg font-semibold mb-2">Daftar Catatan</h2>
+      <ul id="noteList" class="space-y-2"></ul>
     </div>
-
-    <div id="daftar-catatan" class="mt-6 space-y-4 overflow-y-auto max-h-[60vh] pb-4">
-      <!-- Catatan akan ditampilkan di sini -->
-    </div>
-  </main>
+  </div>
 
   <script>
-    const API_URL = "https://api.sheet.best/sheets/33929ee7-21ee-42ec-9570-bc127a71e027"; // Ganti dengan Sheet.best milikmu
+    const form = document.getElementById('noteForm');
+    const noteList = document.getElementById('noteList');
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbwaIz1Tg5beDL8iedlmny-3sTJihemDyO88AF976w12COb1rbqr7HNmJzz5ZYUjNj25wA/exec';
 
-    const isiInput = document.getElementById("isi");
-    const pencarianInput = document.getElementById("pencarian");
-    const daftarCatatan = document.getElementById("daftar-catatan");
-
-    async function tambahCatatan() {
-      const isi = isiInput.value.trim();
-      if (isi === "") return;
-
-      const tanggal = new Date().toISOString().split("T")[0];
-      const waktu = new Date().toLocaleString("id-ID");
-
-      const data = { isi, tanggal, waktu };
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const isi = document.getElementById('isi').value;
 
       try {
-        await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data)
+        const response = await fetch(scriptURL, {
+          method: 'POST',
+          body: JSON.stringify({ isi }),
+          headers: {
+            'Content-Type': 'application/json'
+          }
         });
 
-        isiInput.value = "";
-        await ambilCatatan();
-      } catch (err) {
-        alert("Gagal menyimpan catatan.");
-        console.error(err);
+        const result = await response.json();
+        if (result.success) {
+          document.getElementById('isi').value = '';
+          fetchNotes();
+        }
+      } catch (error) {
+        alert('Gagal menyimpan catatan');
       }
-    }
+    });
 
-    async function ambilCatatan() {
+    async function fetchNotes() {
       try {
-        const res = await fetch(API_URL);
-        const data = await res.json();
-        window.semuaCatatan = data;
-        tampilkanCatatan();
-      } catch (err) {
-        console.error("Gagal mengambil data:", err);
+        const response = await fetch(scriptURL);
+        const notes = await response.json();
+
+        noteList.innerHTML = '';
+        notes.reverse().forEach(note => {
+          const item = document.createElement('li');
+          item.className = 'bg-gray-200 p-2 rounded';
+          item.innerHTML = `<div>${note.isi}</div><small>${new Date(note.tanggal).toLocaleString()}</small>`;
+          noteList.appendChild(item);
+        });
+      } catch (error) {
+        noteList.innerHTML = '<li class="text-red-500">Gagal memuat catatan</li>';
       }
     }
 
-    function tampilkanCatatan() {
-      const keyword = pencarianInput.value.toLowerCase();
-      daftarCatatan.innerHTML = "";
-
-      const filtered = (window.semuaCatatan || []).filter(item =>
-        (item.isi || "").toLowerCase().includes(keyword)
-      );
-
-      filtered.reverse().forEach(item => {
-        const card = document.createElement("div");
-        card.className = "bg-white p-4 shadow rounded border-l-4 border-green-500";
-        card.innerHTML = `
-          <div class="text-sm text-gray-600">${item.waktu || ""} (${item.tanggal || ""})</div>
-          <p class="mt-2 whitespace-pre-wrap">${item.isi || ""}</p>
-        `;
-        daftarCatatan.appendChild(card);
-      });
-    }
-
-    ambilCatatan();
+    fetchNotes();
   </script>
 </body>
 </html>
