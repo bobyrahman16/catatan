@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Form Testing Kirim ke Google Sheets</title>
+</head>
+<body>
+  <h1>Form Testing Kirim ke Google Sheets</h1>
+  <form id="myForm">
+    <input type="text" name="nama" placeholder="Masukkan nama" required>
+    <button type="submit">Kirim</button>
+  </form>
+  <p id="response"></p>
+
+  <script>
+    document.getElementById('myForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const data = Object.fromEntries(formData.entries());
+
+      const response = await fetch('https://api.sheetbest.com/sheets/33929ee7-21ee-42ec-9570-bc127a71e027', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const resultText = response.ok ? 'Data berhasil dikirim' : 'Gagal mengirim data';
+      document.getElementById('response').textContent = resultText;
+    });
+  </script>
+</body>
+</html>
