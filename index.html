@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Catatan Harian</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -13,123 +13,78 @@
 
   <main class="max-w-md mx-auto mt-4 px-4">
     <div class="space-y-3">
-      <input type="text" id="judul" placeholder="Judul" class="w-full p-2 border rounded">
       <textarea id="isi" rows="3" placeholder="Apa yang kamu pikirkan?" class="w-full p-2 border rounded"></textarea>
-      <input type="date" id="tanggal" class="w-full p-2 border rounded text-black bg-white">
-      <input type="text" id="tag" placeholder="#tag (opsional)" class="w-full p-2 border rounded">
       <button onclick="tambahCatatan()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">Simpan</button>
       <input type="text" id="pencarian" placeholder="Cari catatan..." oninput="tampilkanCatatan()" class="w-full p-2 border rounded">
     </div>
 
     <div id="daftar-catatan" class="mt-6 space-y-4 overflow-y-auto max-h-[60vh] pb-4">
-      <!-- Catatan ditampilkan di sini -->
+      <!-- Catatan akan ditampilkan di sini -->
     </div>
   </main>
 
   <script>
-    const API_URL = "https://api.sheetbest.com/sheets/33929ee7-21ee-42ec-9570-bc127a71e027"; // Ganti ini dengan URL Sheet.best milikmu
+    const API_URL = "https://api.sheet.best/sheets/33929ee7-21ee-42ec-9570-bc127a71e027"; // Ganti dengan Sheet.best milikmu
 
-    const judulInput = document.getElementById("judul");
     const isiInput = document.getElementById("isi");
-    const tanggalInput = document.getElementById("tanggal");
-    const tagInput = document.getElementById("tag");
     const pencarianInput = document.getElementById("pencarian");
     const daftarCatatan = document.getElementById("daftar-catatan");
 
-    let catatan = JSON.parse(localStorage.getItem("catatan")) || [];
-
-    function simpanKeLocalStorage() {
-      localStorage.setItem("catatan", JSON.stringify(catatan));
-    }
-
     async function tambahCatatan() {
-      const judul = judulInput.value.trim();
       const isi = isiInput.value.trim();
-      const tanggal = tanggalInput.value || new Date().toISOString().split('T')[0];
-      const tag = tagInput.value.trim();
+      if (isi === "") return;
+
+      const tanggal = new Date().toISOString().split("T")[0];
       const waktu = new Date().toLocaleString("id-ID");
 
-      if (isi) {
-        const dataBaru = { judul, isi, tanggal, tag, waktu };
-        catatan.push(dataBaru);
-        simpanKeLocalStorage();
-        tampilkanCatatan();
+      const data = { isi, tanggal, waktu };
 
-        // Simpan ke Google Sheet via Sheet.best
-        try {
-          await fetch(API_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(dataBaru)
-          });
-        } catch (error) {
-          alert("Gagal menyimpan ke Google Sheet.");
-          console.error(error);
-        }
+      try {
+        await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
 
-        // Reset input
-        judulInput.value = "";
         isiInput.value = "";
-        tanggalInput.value = "";
-        tagInput.value = "";
+        await ambilCatatan();
+      } catch (err) {
+        alert("Gagal menyimpan catatan.");
+        console.error(err);
       }
     }
 
-    function hapusCatatan(index) {
-      if (confirm("Hapus catatan ini?")) {
-        catatan.splice(index, 1);
-        simpanKeLocalStorage();
+    async function ambilCatatan() {
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        window.semuaCatatan = data;
         tampilkanCatatan();
+      } catch (err) {
+        console.error("Gagal mengambil data:", err);
       }
-    }
-
-    function editCatatan(index) {
-      const data = catatan[index];
-      judulInput.value = data.judul;
-      isiInput.value = data.isi;
-      tanggalInput.value = data.tanggal;
-      tagInput.value = data.tag;
-      catatan.splice(index, 1);
-      simpanKeLocalStorage();
-      tampilkanCatatan();
     }
 
     function tampilkanCatatan() {
       const keyword = pencarianInput.value.toLowerCase();
       daftarCatatan.innerHTML = "";
 
-      catatan.slice().reverse().forEach((item, indexAsli) => {
-        const index = catatan.length - 1 - indexAsli;
-        if (
-          item.judul.toLowerCase().includes(keyword) ||
-          item.isi.toLowerCase().includes(keyword) ||
-          (item.tag || '').toLowerCase().includes(keyword)
-        ) {
-          const card = document.createElement("div");
-          card.className = "bg-white p-4 shadow rounded border-l-4 border-green-500";
-          card.innerHTML = `
-            <div class="text-sm text-gray-600">${item.waktu} (${item.tanggal})</div>
-            <h3 class="font-semibold">${item.judul || '(Tanpa Judul)'}</h3>
-            <p class="my-2 whitespace-pre-wrap">${item.isi}</p>
-            <div class="text-xs text-blue-600 cursor-pointer" onclick="filterTag('${item.tag}')">${item.tag ? '#' + item.tag : ''}</div>
-            <div class="flex gap-2 mt-2">
-              <button onclick="editCatatan(${index})" class="text-sm text-yellow-600">Edit</button>
-              <button onclick="hapusCatatan(${index})" class="text-sm text-red-600">Hapus</button>
-            </div>
-          `;
-          daftarCatatan.appendChild(card);
-        }
+      const filtered = (window.semuaCatatan || []).filter(item =>
+        (item.isi || "").toLowerCase().includes(keyword)
+      );
+
+      filtered.reverse().forEach(item => {
+        const card = document.createElement("div");
+        card.className = "bg-white p-4 shadow rounded border-l-4 border-green-500";
+        card.innerHTML = `
+          <div class="text-sm text-gray-600">${item.waktu || ""} (${item.tanggal || ""})</div>
+          <p class="mt-2 whitespace-pre-wrap">${item.isi || ""}</p>
+        `;
+        daftarCatatan.appendChild(card);
       });
     }
 
-    function filterTag(tag) {
-      pencarianInput.value = tag;
-      tampilkanCatatan();
-    }
-
-    tampilkanCatatan();
+    ambilCatatan();
   </script>
 </body>
 </html>
